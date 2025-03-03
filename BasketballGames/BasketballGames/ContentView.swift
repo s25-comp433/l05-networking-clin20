@@ -7,15 +7,67 @@
 
 import SwiftUI
 
+struct Response: Codable {
+    var results: [Result]
+}
+
+struct Result: Codable {
+    var score: Score
+    var team: String
+    var isHomeGame: Bool
+    var opponent: String
+    var date: String
+    var id: Int
+}
+
+struct Score: Codable {
+    var unc: Int
+    var opponent: Int
+}
+
 struct ContentView: View {
+    @State private var results = [Result]()
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Text("UNC Basketball")
+            .font(.headline)
+        List(results, id: \.id) { item in
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("\(item.team) vs. \(item.opponent)")
+                    Text(item.date)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing) {
+                    Text("\(item.score.unc) - \(item.score.opponent)")
+                    Text(item.isHomeGame ? "Home" : "Away")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
-        .padding()
+        .task {
+            await loadData()
+        }
+    }
+
+    func loadData() async {
+        guard let url = URL(string: "https://api.samuelshi.com/uncbasketball") else {
+            print("Invalid URL")
+            return
+        }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+
+            if let decoded = try? JSONDecoder().decode([Result].self, from: data) {
+                results = decoded
+            }
+        } catch {
+            print("Invalid data")
+        }
     }
 }
 
